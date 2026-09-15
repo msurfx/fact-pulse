@@ -1,44 +1,68 @@
 # Fact Pulse
 
-A claim-checker built for the Nebius × NVIDIA Global AI Hackathon.
-Paste a claim → Tavily pulls live sources → an NVIDIA open model
-(`nvidia/nemotron-3-super-120b-a12b`) served via **Nebius Token Factory**
-weighs the evidence and returns a verdict.
+**Paste a claim. Get it checked against live sources — grounded, not guessed.**
 
-## Why it's two files
+Built for the Nebius × NVIDIA Global AI Hackathon.
 
-- `index.html` — the mobile-friendly frontend (no API keys inside it)
-- `api/verify.js` — a serverless function that holds your API keys and
-  makes the actual calls to Tavily and Nebius, server-side
+## What it does
 
-This avoids the browser CORS/sandbox restrictions you'd hit calling those
-APIs directly from a client-side page, and it keeps your keys off the
-public page.
+Fact Pulse takes any claim — a headline, a rumor, something from a group
+chat — and returns a sourced verdict in seconds:
 
-## Deploy this from your phone (no laptop, no terminal)
+1. **Tavily** searches the live web for relevant, current sources
+2. **NVIDIA Nemotron 3 Super**, served via **Nebius Token Factory**,
+   reads the claim alongside those sources and returns a verdict
+   (verified / false / mixed), a confidence level, and an explanation
+   that cites specific sources
+3. The result is shown with links to every source, so you can verify
+   the verdict yourself
 
-**1. Put the code on GitHub**
-- Open github.com in your phone browser, log in
-- Create a new repository (e.g. `fact-pulse`)
-- Use "Add file → Upload files" to upload `index.html` and the `api`
-  folder (containing `verify.js`) — GitHub's mobile upload preserves
-  folder structure if you drag/select the whole `api/verify.js` path,
-  or you can create `api/verify.js` directly with "Create new file" and
-  paste the contents in
-- Commit directly to the `main` branch
+The point: instead of asking an LLM to answer from memory (which can
+hallucinate), every verdict here is forced to be grounded in evidence
+fetched at the moment of the query.
 
-**2. Deploy on Vercel**
-- Open vercel.com in your phone browser
-- Sign up / log in with your GitHub account
-- Tap "Add New… → Project", select the `fact-pulse` repo, tap Import
-- Before deploying, open **Environment Variables** and add:
-  - `TAVILY_API_KEY` = your Tavily key
-  - `NEBIUS_API_KEY` = your Nebius Token Factory key
-- Tap Deploy
+## How it meets the hackathon requirements
 
-**3. Open your live app**
-- Vercel gives you a URL like `fact-pulse-yourname.vercel.app`
-- Open it, type a claim, tap Investigate
+| Requirement | How Fact Pulse satisfies it |
+|---|---|
+| Runs on Nebius Token Factory or Nebius AI Cloud | `api/verify.js` calls `https://api.tokenfactory.nebius.com/v1/chat/completions` for all model inference |
+| Uses at least one NVIDIA open-source model | Model used is `nvidia/nemotron-3-super-120b-a12b` |
+| Track | Best Apps and Agents |
 
-If you ever change a key, update it in Vercel's Project Settings →
-Environment Variables, then redeploy (Vercel will prompt you).
+## Architecture
+
+```
+┌─────────────┐      POST /api/verify      ┌──────────────────┐
+│  index.html │ ───────────────────────────▶│ verify.js         │
+│ (frontend)  │                              │ (Vercel function)│
+└─────────────┘                              └──────────────────┘
+                                                     │        │
+                                          1. search  │        │ 2. reason over
+                                             claim    ▼        ▼    sources
+                                        ┌──────────┐    ┌──────────────────┐
+                                        │  Tavily   │    │ Nebius Token      │
+                                        │  Search   │    │ Factory           │
+                                        │  API      │    │ (NVIDIA Nemotron) │
+                                        └──────────┘    └──────────────────┘
+```
+
+API keys (`TAVILY_API_KEY`, `NEBIUS_API_KEY`) live server-side as Vercel
+environment variables — never exposed to the browser.
+
+## Try it
+
+Live: `https://fact-pulse-msurfx.vercel.app` *(replace with your actual URL)*
+
+Or run locally:
+1. Clone this repo
+2. Deploy to Vercel (auto-detects `index.html` + `api/verify.js`)
+3. Set `TAVILY_API_KEY` and `NEBIUS_API_KEY` in Vercel's Environment
+   Variables
+4. Deploy
+
+## Stack
+
+- Tavily Search API — real-time evidence retrieval
+- NVIDIA Nemotron 3 Super via Nebius Token Factory — reasoning over evidence
+- Vercel serverless function — orchestration + key security
+- Vanilla HTML/CSS/JS frontend — no build step, mobile-first
