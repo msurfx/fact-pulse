@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Fact Pulse</title>
+<style>
+  :root{
+    --ink:#12161D;
+    --ink-2:#1B212B;
+    --paper:#EDE7D8;
+    --rule:#C9C0AA;
+    --text:#23201A;
+    --text-dim:#5B5646;
+    --accent:#2C5F73;
+    --accent-2:#4B8FA3;
+    --verified:#3F7A5C;
+    --false:#A8402F;
+    --mixed:#B4802E;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    background-image:
+      radial-gradient(circle at 20% 0%, rgba(75,143,163,0.08), transparent 40%),
+      radial-gradient(circle at 80% 100%, rgba(75,143,163,0.06), transparent 45%);
+    min-height:100vh;
+    font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color:var(--text);
+    display:flex;
+    justify-content:center;
+    padding:28px 16px 60px;
+  }
+  .sheet{width:100%;max-width:480px;}
+  .masthead{text-align:left;padding-bottom:14px;border-bottom:2px solid rgba(237,231,216,0.9);margin-bottom:22px;}
+  .masthead .kicker{font-family:ui-monospace, Menlo, monospace;font-size:11px;letter-spacing:0.08em;color:var(--accent-2);margin-bottom:6px;}
+  .masthead h1{font-family:Georgia, 'Times New Roman', serif;font-size:34px;line-height:1.05;margin:0;color:var(--paper);font-weight:600;}
+  .masthead p{font-family:Georgia, serif;font-style:italic;color:#9AA3AD;font-size:14px;margin:8px 0 0;}
+
+  .intake{background:var(--paper);border-radius:2px;padding:22px 20px 20px;box-shadow:0 18px 40px rgba(0,0,0,0.35);}
+  .field-label{font-family:ui-monospace, Menlo, monospace;font-size:11px;letter-spacing:0.06em;color:var(--text-dim);margin-bottom:8px;}
+  textarea{width:100%;background:transparent;border:none;border-bottom:1.5px solid var(--rule);resize:none;font-family:Georgia, serif;font-size:17px;line-height:1.45;color:var(--text);padding:4px 2px 10px;min-height:70px;}
+  textarea:focus{outline:none;border-bottom-color:var(--accent);}
+  textarea::placeholder{color:#9C927A;}
+
+  .go{margin-top:16px;width:100%;background:var(--ink);color:var(--paper);border:none;border-radius:2px;padding:13px;font-size:14px;font-weight:600;letter-spacing:0.02em;cursor:pointer;font-family:-apple-system, sans-serif;}
+  .go:active{transform:translateY(1px);}
+  .go:disabled{opacity:0.55;}
+
+  .status{margin-top:14px;font-family:ui-monospace, Menlo, monospace;font-size:12px;color:var(--text-dim);display:none;}
+  .status.show{display:block;}
+  .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-right:7px;animation:pulse 1.1s infinite ease-in-out;}
+  @keyframes pulse{0%,100%{opacity:0.3}50%{opacity:1}}
+
+  .error{margin-top:14px;background:#3A1E1A;border:1px solid rgba(168,64,47,0.5);color:#E8B4A8;padding:12px 14px;border-radius:3px;font-size:13px;line-height:1.5;display:none;}
+  .error.show{display:block;}
+
+  .result{margin-top:24px;background:var(--paper);border-radius:2px;padding:26px 20px 22px;box-shadow:0 18px 40px rgba(0,0,0,0.35);display:none;position:relative;overflow:hidden;}
+  .result.show{display:block;}
+
+  .stamp{position:absolute;top:18px;right:-8px;transform:rotate(-9deg);border:3px solid;border-radius:6px;padding:6px 14px;font-family:Georgia, serif;font-weight:700;font-size:15px;letter-spacing:0.05em;opacity:0.92;}
+  .stamp.verified{border-color:var(--verified);color:var(--verified);}
+  .stamp.false{border-color:var(--false);color:var(--false);}
+  .stamp.mixed{border-color:var(--mixed);color:var(--mixed);}
+
+  .result .claim-echo{font-family:Georgia, serif;font-style:italic;font-size:15px;color:var(--text-dim);border-left:2px solid var(--rule);padding-left:12px;margin:0 70px 18px 0;line-height:1.5;}
+  .confidence{font-family:ui-monospace, Menlo, monospace;font-size:11px;color:var(--text-dim);margin-bottom:16px;}
+  .confidence b{color:var(--text);}
+  .explanation{font-size:15px;line-height:1.6;color:var(--text);margin-bottom:20px;}
+  .exhibits-label{font-family:ui-monospace, Menlo, monospace;font-size:11px;letter-spacing:0.06em;color:var(--text-dim);border-top:1px solid var(--rule);padding-top:16px;margin-bottom:10px;}
+  .exhibit{display:flex;gap:10px;padding:9px 0;border-bottom:1px dotted var(--rule);font-size:13px;}
+  .exhibit:last-child{border-bottom:none;}
+  .exhibit .tag{font-family:ui-monospace, Menlo, monospace;color:var(--accent);flex-shrink:0;font-size:12px;padding-top:1px;}
+  .exhibit a{color:var(--text);text-decoration:none;font-weight:600;}
+  .exhibit a:hover{text-decoration:underline;}
+  .exhibit .domain{display:block;color:var(--text-dim);font-size:11px;margin-top:2px;font-family:ui-monospace, Menlo, monospace;}
+
+  footer{text-align:center;margin-top:26px;font-size:11px;color:#5C6570;font-family:ui-monospace, Menlo, monospace;}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="masthead">
+    <div class="kicker">NVIDIA · NEBIUS TOKEN FACTORY · TAVILY</div>
+    <h1>Fact Pulse</h1>
+    <p>Paste a claim. Get it checked against live sources.</p>
+  </div>
+
+  <div class="intake">
+    <div class="field-label">CLAIM UNDER REVIEW</div>
+    <textarea id="claimInput" placeholder="e.g. &quot;The Great Wall of China is visible from space with the naked eye.&quot;"></textarea>
+    <button class="go" id="goBtn">Investigate</button>
+    <div class="status" id="status"><span class="dot"></span><span id="statusText">Searching live sources and weighing evidence…</span></div>
+    <div class="error" id="error"></div>
+  </div>
+
+  <div class="result" id="result">
+    <div class="stamp" id="stamp">—</div>
+    <div class="claim-echo" id="claimEcho"></div>
+    <div class="confidence">CONFIDENCE: <b id="confidenceVal">—</b></div>
+    <div class="explanation" id="explanation"></div>
+    <div class="exhibits-label">EXHIBITS</div>
+    <div id="exhibits"></div>
+  </div>
+
+  <footer>BUILT FOR THE NEBIUS × NVIDIA GLOBAL AI HACKATHON</footer>
+</div>
+
+<script>
+const goBtn = document.getElementById('goBtn');
+const claimInput = document.getElementById('claimInput');
+const statusEl = document.getElementById('status');
+const errorEl = document.getElementById('error');
+const resultEl = document.getElementById('result');
+
+function showError(msg){ errorEl.textContent = msg; errorEl.classList.add('show'); }
+function clearError(){ errorEl.classList.remove('show'); errorEl.textContent=''; }
+
+function domainOf(url){ try{ return new URL(url).hostname.replace('www.',''); }catch(e){ return url; } }
+
+function render(claim, verdict, sources){
+  document.getElementById('claimEcho').textContent = '"' + claim + '"';
+  const stamp = document.getElementById('stamp');
+  const v = (verdict.verdict||'mixed').toLowerCase();
+  const labelMap = {verified:'VERIFIED', false:'FALSE', mixed:'MIXED'};
+  stamp.textContent = labelMap[v] || 'MIXED';
+  stamp.className = 'stamp ' + (labelMap[v] ? v : 'mixed');
+  document.getElementById('confidenceVal').textContent = (verdict.confidence || 'medium').toUpperCase();
+  document.getElementById('explanation').textContent = verdict.explanation || '';
+
+  const exhibitsEl = document.getElementById('exhibits');
+  exhibitsEl.innerHTML = '';
+  sources.forEach((s, i) => {
+    const row = document.createElement('div');
+    row.className = 'exhibit';
+    row.innerHTML =
+      '<div class="tag">' + (i+1) + '</div>' +
+      '<div><a href="' + s.url + '" target="_blank" rel="noopener">' + s.title + '</a>' +
+      '<span class="domain">' + domainOf(s.url) + '</span></div>';
+    exhibitsEl.appendChild(row);
+  });
+  resultEl.classList.add('show');
+}
+
+goBtn.addEventListener('click', async () => {
+  clearError();
+  resultEl.classList.remove('show');
+  const claim = claimInput.value.trim();
+  if(!claim){ showError('Enter a claim to check.'); return; }
+
+  goBtn.disabled = true;
+  statusEl.classList.add('show');
+
+  try{
+    const res = await fetch('/api/verify', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({claim})
+    });
+    const data = await res.json();
+    if(!res.ok || data.error){
+      throw new Error(data.error || ('Request failed (' + res.status + ')'));
+    }
+    render(claim, data.verdict, data.sources);
+  }catch(err){
+    showError(err.message || String(err));
+  }finally{
+    statusEl.classList.remove('show');
+    goBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
