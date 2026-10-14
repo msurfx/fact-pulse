@@ -2,7 +2,9 @@
 
 **Paste a claim. Get it checked against live sources — grounded, not guessed.**
 
-Built for the Nebius × NVIDIA Global AI Hackathon.
+Built for the Nebius × NVIDIA Global AI Hackathon (track: Best Apps and Agents).
+
+**Live demo:** https://fact-pulse-iota.vercel.app/
 
 ## What it does
 
@@ -17,52 +19,65 @@ chat — and returns a sourced verdict in seconds:
 3. The result is shown with links to every source, so you can verify
    the verdict yourself
 
-The point: instead of asking an LLM to answer from memory (which can
-hallucinate), every verdict here is forced to be grounded in evidence
-fetched at the moment of the query.
+Instead of asking an LLM to answer from memory (which can hallucinate),
+every verdict is grounded in evidence fetched at the moment of the query.
 
-## How it meets the hackathon requirements
+## How it uses NVIDIA and Nebius
 
 | Requirement | How Fact Pulse satisfies it |
 |---|---|
 | Runs on Nebius Token Factory or Nebius AI Cloud | `api/verify.js` calls `https://api.tokenfactory.nebius.com/v1/chat/completions` for all model inference |
-| Uses at least one NVIDIA open-source model | Model used is `nvidia/nemotron-3-super-120b-a12b` |
-| Track | Best Apps and Agents |
+| Uses an NVIDIA open-source model | `nvidia/nemotron-3-super-120b-a12b`, used out of the box with a strict JSON-output system prompt |
+| Tavily | `api/verify.js` makes a live call to the Tavily Search API on every request |
+
+**Why Nemotron 3 Super:** the task is weighing several, sometimes
+conflicting, web sources to reach a nuanced verdict, so we chose the larger
+reasoning-oriented variant over a smaller one.
+
+**Where Token Factory helped:** it is a fully managed, OpenAI-compatible
+endpoint, so we called an NVIDIA open model with standard chat-completions
+requests and no GPU provisioning or model hosting on our side. The code also
+reads both `content` and `reasoning_content` from the response, since
+Nemotron's reasoning variants can return text in either field.
 
 ## Architecture
 
 ```
 ┌─────────────┐      POST /api/verify      ┌──────────────────┐
-│  index.html │ ───────────────────────────▶│ verify.js         │
-│ (frontend)  │                              │ (Vercel function)│
-└─────────────┘                              └──────────────────┘
-                                                     │        │
-                                          1. search  │        │ 2. reason over
-                                             claim    ▼        ▼    sources
-                                        ┌──────────┐    ┌──────────────────┐
-                                        │  Tavily   │    │ Nebius Token      │
-                                        │  Search   │    │ Factory           │
-                                        │  API      │    │ (NVIDIA Nemotron) │
-                                        └──────────┘    └──────────────────┘
+│  index.html │ ──────────────────────────▶│ verify.js        │
+│ (frontend)  │                            │ (Vercel function)│
+└─────────────┘                            └──────────────────┘
+                                                  │        │
+                                       1. search  │        │ 2. reason over
+                                          claim   ▼        ▼    sources
+                                     ┌──────────┐    ┌──────────────────┐
+                                     │  Tavily  │    │ Nebius Token     │
+                                     │  Search  │    │ Factory          │
+                                     │  API     │    │ (NVIDIA Nemotron)│
+                                     └──────────┘    └──────────────────┘
 ```
 
-API keys (`TAVILY_API_KEY`, `NEBIUS_API_KEY`) live server-side as Vercel
-environment variables — never exposed to the browser.
+API keys live server-side as Vercel environment variables and are never
+exposed to the browser.
 
-## Try it
+## Run your own copy
 
-Live: `https://fact-pulse-msurfx.vercel.app` *(replace with your actual URL)*
+1. Fork or clone this repo
+2. Import it into Vercel (auto-detects `index.html` + `api/verify.js`)
+3. Add two Environment Variables:
+   - `TAVILY_API_KEY` — from https://app.tavily.com
+   - `NEBIUS_API_KEY` — from the Nebius Token Factory console
+4. Deploy, open the URL, and paste a claim
 
-Or run locally:
-1. Clone this repo
-2. Deploy to Vercel (auto-detects `index.html` + `api/verify.js`)
-3. Set `TAVILY_API_KEY` and `NEBIUS_API_KEY` in Vercel's Environment
-   Variables
-4. Deploy
+No build step is needed.
 
 ## Stack
 
 - Tavily Search API — real-time evidence retrieval
 - NVIDIA Nemotron 3 Super via Nebius Token Factory — reasoning over evidence
-- Vercel serverless function — orchestration + key security
-- Vanilla HTML/CSS/JS frontend — no build step, mobile-first
+- Vercel serverless function — orchestration and key security
+- Vanilla HTML/CSS/JS frontend — mobile-first
+
+## License
+
+MIT — see [LICENSE](LICENSE).
